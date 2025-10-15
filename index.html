@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner for MAC Addresses</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #e7e7e7 0%, #fff7ef 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ffb13d 0%, #ff6600 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .scanner-section {
+            margin-bottom: 30px;
+        }
+
+        .video-container {
+            position: relative;
+            max-width: 640px;
+            max-height: 480px;
+            height: 300px;
+            margin: 0 auto 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        #video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 3px solid #fe0000;
+            border-radius: 10px;
+            background: rgba(254, 0, 0, 0.1);
+            pointer-events: none;
+        }
+
+        .scanner-overlay::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border: 2px solid #fe4f4f;
+            border-radius: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #20b30c 0%, #1a6d05 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: #979797;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #1dac3e;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #c91426;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #1a6ab6;
+            border: 1px solid #bee5eb;
+        }
+
+        .scanned-list {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .scanned-list h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #6e6e6e;
+            padding-bottom: 10px;
+        }
+
+        .scan-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .scan-item:hover {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+        }
+
+        .scan-item.valid {
+            border-left: 4px solid #28a745;
+        }
+
+        .scan-item.invalid {
+            border-left: 4px solid #dc3545;
+        }
+
+        .scan-content {
+            flex: 1;
+        }
+
+        .scan-mac {
+            font-family: 'Source Code Pro', 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .scan-time {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .scan-status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .scan-status.valid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .scan-status.invalid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .scan-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .delete-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+        }
+
+        .delete-btn:hover {
+            background: #ff3742;
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .scan-item:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .clear-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(255, 107, 107, 0.4);
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(46, 204, 113, 0.4);
+        }
+
+        .export-btn.csv {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+
+        .export-btn.csv:hover {
+            box-shadow: 0 3px 10px rgba(52, 152, 219, 0.4);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 40px;
+        }
+
+        .footer {
+            background: linear-gradient(135deg, #ffb13d 0%, #ff6600 100%);
+            color: white;
+            text-align: center;
+            padding: 15px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .footer .version {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .footer .name {
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .scanner-overlay {
+                width: 150px;
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>QR Code Scanner for MAC Addresses</h1>
+        </div>
+        
+        <div class="content">
+            <div class="scanner-section">
+                <div class="video-container">
+                    <video id="video" autoplay muted playsinline></video>
+                    <div class="scanner-overlay"></div>
+                </div>
+                
+                <div class="controls">
+                    <button id="startBtn" class="btn">Start Scanner</button>
+                    <button id="stopBtn" class="btn" disabled>Stop Scanner</button>
+                </div>
+                
+                <div id="status" class="status info">
+                    Ready to scan...
+                </div>
+            </div>
+            
+            <div class="scanned-list">
+                <h3>Scanned MAC Addresses</h3>
+                <div id="scanList">
+                    <div class="empty-state">
+                        No QR codes scanned yet
+                    </div>
+                </div>
+                <div class="export-buttons" style="display: none;">
+                    <button id="exportCsvBtn" class="export-btn csv">📊 Export as CSV</button>
+                    <button id="copyTableBtn" class="export-btn">📋 Copy Table</button>
+                </div>
+                <button id="clearBtn" class="clear-btn" style="display: none;">Clear List</button>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="version">QR Code Scanner v1.1</div>
+            <div class="name"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script>
+        class QRCodeScanner {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.createElement('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.isScanning = false;
+                this.scannedCodes = new Set(); // Verhindert Duplikate
+                this.scanList = document.getElementById('scanList');
+                this.status = document.getElementById('status');
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.clearBtn = document.getElementById('clearBtn');
+                this.exportCsvBtn = document.getElementById('exportCsvBtn');
+                this.copyTableBtn = document.getElementById('copyTableBtn');
+                this.exportButtons = document.querySelector('.export-buttons');
+                
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                this.startBtn.addEventListener('click', () => this.startScanning());
+                this.stopBtn.addEventListener('click', () => this.stopScanning());
+                this.clearBtn.addEventListener('click', () => this.clearList());
+                this.exportCsvBtn.addEventListener('click', () => this.exportToCSV());
+                this.copyTableBtn.addEventListener('click', () => this.copyTableToClipboard());
+            }
+
+            async startScanning() {
+                try {
+                    this.showStatus('Starting camera...', 'info');
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            facingMode: 'environment',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }
+                    });
+                    
+                    this.video.srcObject = stream;
+                    this.video.play();
+                    
+                    this.isScanning = true;
+                    this.startBtn.disabled = true;
+                    this.stopBtn.disabled = false;
+                    
+                    this.showStatus('Scanner running - hold QR code in front of camera', 'success');
+                    this.scan();
+                    
+                } catch (error) {
+                    console.error('Error starting camera:', error);
+                    this.showStatus('Error starting camera: ' + error.message, 'error');
+                }
+            }
+
+            stopScanning() {
+                this.isScanning = false;
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                
+                if (this.video.srcObject) {
+                    const tracks = this.video.srcObject.getTracks();
+                    tracks.forEach(track => track.stop());
+                    this.video.srcObject = null;
+                }
+                
+                this.showStatus('Scanner stopped', 'info');
+            }
+
+            scan() {
+                if (!this.isScanning) return;
+                
+                if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+                    this.canvas.width = this.video.videoWidth;
+                    this.canvas.height = this.video.videoHeight;
+                    this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                    
+                    const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code) {
+                        this.handleQRCode(code.data);
+                    }
+                }
+                
+                requestAnimationFrame(() => this.scan());
+            }
+
+            handleQRCode(data) {
+                // Check if code was already scanned
+                if (this.scannedCodes.has(data)) {
+                    return;
+                }
+                
+                const isValidMAC = this.validateMACAddress(data);
+                const timestamp = new Date().toISOString();
+                
+                // Mark code as scanned
+                this.scannedCodes.add(data);
+                
+                // Add to list
+                this.addToScanList(data, isValidMAC, timestamp);
+                
+                // Show status
+                if (isValidMAC) {
+                    this.showStatus(`MAC address scanned: ${data}`, 'success');
+                } else {
+                    this.showStatus(`Invalid MAC address: ${data}`, 'error');
+                }
+            }
+
+            validateMACAddress(mac) {
+                // Support various MAC address formats
+                const macPatterns = [
+                    /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/,
+                    /^([0-9A-Fa-f]{2}){6}$/,
+                    /^([0-9A-Fa-f]{4}[:-]){2}([0-9A-Fa-f]{4})$/
+                ];
+                
+                return macPatterns.some(pattern => pattern.test(mac.trim()));
+            }
+
+            addToScanList(mac, isValid, timestamp) {
+                // Remove empty state
+                const emptyState = this.scanList.querySelector('.empty-state');
+                if (emptyState) {
+                    emptyState.remove();
+                }
+                
+                // Show clear button and export buttons
+                this.clearBtn.style.display = 'block';
+                this.exportButtons.style.display = 'flex';
+                
+                // Create new element
+                const scanItem = document.createElement('div');
+                scanItem.className = `scan-item ${isValid ? 'valid' : 'invalid'}`;
+                
+                scanItem.innerHTML = `
+                    <div class="scan-content">
+                        <div class="scan-mac">${mac}</div>
+                        <div class="scan-time">${timestamp}</div>
+                    </div>
+                    <div class="scan-actions">
+                        <div class="scan-status ${isValid ? 'valid' : 'invalid'}">
+                            ${isValid ? 'Valid' : 'Invalid'}
+                        </div>
+                        <button class="delete-btn" title="Delete entry">🗑️</button>
+                    </div>
+                `;
+                
+                // Event Listener for copying
+                scanItem.addEventListener('click', (e) => {
+                    // Prevent copying when clicking on delete button
+                    if (e.target.classList.contains('delete-btn')) {
+                        return;
+                    }
+                    this.copyToClipboard(mac);
+                });
+                
+                // Event Listener for deleting
+                const deleteBtn = scanItem.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent copying when deleting
+                    this.deleteScanItem(scanItem, mac);
+                });
+                
+                // Insert at the beginning of the list
+                this.scanList.insertBefore(scanItem, this.scanList.firstChild);
+            }
+
+            deleteScanItem(scanItem, mac) {
+                // Remove element from list
+                scanItem.remove();
+                
+                // Remove from set
+                this.scannedCodes.delete(mac);
+                
+                // Check if list is empty
+                if (this.scanList.children.length === 0 || 
+                    (this.scanList.children.length === 1 && this.scanList.querySelector('.empty-state'))) {
+                    this.scanList.innerHTML = '<div class="empty-state">No QR codes scanned yet</div>';
+                    this.clearBtn.style.display = 'none';
+                    this.exportButtons.style.display = 'none';
+                }
+                
+                this.showStatus(`Entry deleted: ${mac}`, 'info');
+            }
+
+            async copyToClipboard(text) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    this.showStatus(`Copied to clipboard: ${text}`, 'success');
+                } catch (error) {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    this.showStatus(`Copied to clipboard: ${text}`, 'success');
+                }
+            }
+
+            exportToCSV() {
+                const scanItems = this.scanList.querySelectorAll('.scan-item');
+                if (scanItems.length === 0) {
+                    this.showStatus('No data available for export', 'error');
+                    return;
+                }
+
+                // CSV Header
+                let csvContent = 'MAC Address,Status,Timestamp\n';
+                
+                // Collect data (in reverse order since newest are displayed first)
+                const data = [];
+                scanItems.forEach(item => {
+                    const mac = item.querySelector('.scan-mac').textContent;
+                    const status = item.querySelector('.scan-status').textContent;
+                    const time = item.querySelector('.scan-time').textContent;
+                    data.unshift({ mac, status, time });
+                });
+                
+                // Create CSV data - all information in one line per MAC address
+                data.forEach(item => {
+                    // Remove any line breaks and extra whitespace from the data to ensure single line per entry
+                    const cleanMac = item.mac.replace(/[\r\n]/g, '');
+                    const cleanStatus = item.status.replace(/[\r\n]/g, '').trim();
+                    const cleanTime = item.time.replace(/[\r\n]/g, '');
+                    csvContent += `"${cleanMac}","${cleanStatus}","${cleanTime}"\n`;
+                });
+
+                // Download CSV file
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `mac-addresses_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                this.showStatus(`CSV export successful: ${data.length} entries`, 'success');
+            }
+
+            async copyTableToClipboard() {
+                const scanItems = this.scanList.querySelectorAll('.scan-item');
+                if (scanItems.length === 0) {
+                    this.showStatus('No data available for copying', 'error');
+                    return;
+                }
+
+                // Table header
+                let tableContent = 'MAC Address\tStatus\tTimestamp\n';
+                
+                // Collect data (in reverse order)
+                const data = [];
+                scanItems.forEach(item => {
+                    const mac = item.querySelector('.scan-mac').textContent;
+                    const status = item.querySelector('.scan-status').textContent;
+                    const time = item.querySelector('.scan-time').textContent;
+                    data.unshift({ mac, status, time });
+                });
+                
+                // Create table data - all information in one line per MAC address
+                data.forEach(item => {
+                    // Remove any line breaks and extra whitespace from the data to ensure single line per entry
+                    const cleanMac = item.mac.replace(/[\r\n]/g, '');
+                    const cleanStatus = item.status.replace(/[\r\n]/g, '').trim();
+                    const cleanTime = item.time.replace(/[\r\n]/g, '');
+                    tableContent += `${cleanMac}\t${cleanStatus}\t${cleanTime}\n`;
+                });
+
+                try {
+                    await navigator.clipboard.writeText(tableContent);
+                    this.showStatus(`Table copied to clipboard: ${data.length} entries`, 'success');
+                } catch (error) {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = tableContent;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    this.showStatus(`Table copied to clipboard: ${data.length} entries`, 'success');
+                }
+            }
+
+            clearList() {
+                this.scanList.innerHTML = '<div class="empty-state">No QR codes scanned yet</div>';
+                this.scannedCodes.clear();
+                this.clearBtn.style.display = 'none';
+                this.exportButtons.style.display = 'none';
+                this.showStatus('List cleared', 'info');
+            }
+
+            showStatus(message, type) {
+                this.status.textContent = message;
+                this.status.className = `status ${type}`;
+                this.status.style.display = 'block';
+            }
+        }
+
+        // Initialize scanner when page is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new QRCodeScanner();
+        });
+    </script>
+</body>
+</html>
