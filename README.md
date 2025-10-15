@@ -93,7 +93,7 @@ AA:BB:CC:DD:EE:FF	Valid	2024-01-15T14:30:45.123Z
 11:22:33:44:55:66	Invalid	2024-01-15T14:31:12.456Z
 ```
 
-## 🔒 Privacy & Security
+## Privacy & Security
 
 - **Local Processing**: All scanning and processing happens locally in your browser
 - **No Data Transmission**: No data is sent to external servers
@@ -107,21 +107,7 @@ AA:BB:CC:DD:EE:FF	Valid	2024-01-15T14:30:45.123Z
 ## License
 This project is licensed under the MIT License
 
-### Development
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## 📞 Support
-
-If you encounter any issues or have questions:
-- **Issues**: Use GitHub Issues for bug reports
-- **Discussions**: Use GitHub Discussions for questions
-- **Documentation**: Check this README for common solutions
-
-## 🔄 Version History
+## Version History
 
 - **v1.1**: Enhanced UI design, improved export functionality
 - **v1.0**: Initial release with core scanning and export features
@@ -129,3 +115,4 @@ If you encounter any issues or have questions:
 ---
 
 **Made with ❤️ for efficient MAC address management**
+
